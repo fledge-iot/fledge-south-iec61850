@@ -69,7 +69,7 @@ const char *default_config = QUOTE ({
                                         "Logical Node" : {
         "description" : "Logical node of the 61850 server",
         "type" : "string", //LogicalNode
-        "default" : "[TTMP1]",
+        "default" : "TTMP1",
         "displayName" : "61850 Server logical node"
 
     },
@@ -165,6 +165,8 @@ void plugin_start(PLUGIN_HANDLE *handle) {
     IEC61850 *iec61850 = (IEC61850 *) handle;
     iec61850->start();
 
+
+
 }
 
 /**
@@ -191,11 +193,12 @@ Reading plugin_poll(PLUGIN_HANDLE *handle) {
  *
  */
 void plugin_reconfigure(PLUGIN_HANDLE *handle, string &newConfig) {
-
-    Logger::getLogger()->warn("Reconfigure");
-
     ConfigCategory config("new", newConfig);
     auto *iec61850 = (IEC61850 *) *handle;
+
+    std::unique_lock<std::mutex> guard2(iec61850->loopLock);
+    iec61850->loopActivated = false;
+    iec61850->loopThread.join();
 
     string ip;
     string model;
@@ -245,7 +248,7 @@ void plugin_reconfigure(PLUGIN_HANDLE *handle, string &newConfig) {
     }
 
     iec61850->start();
-
+    guard2.unlock();
 }
 
 /**
