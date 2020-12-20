@@ -76,9 +76,6 @@ private:
 		void				*m_data{};
 
 		IEC61850Client   	*m_client{};
-
-
-
 };
 
 
@@ -89,7 +86,7 @@ class IEC61850Client
 		//Send the data from the MSS to fledge 
 
 		explicit IEC61850Client(IEC61850 *iec61850) : m_iec61850(iec61850) {};
-			
+
 		void sendDatafloat(std::string dataname,float a)
 		{
        		DatapointValue value = DatapointValue(a);
