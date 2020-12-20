@@ -1,7 +1,45 @@
-Fledge "iec61850" C++ South plugin
+===============================================================================
+IEC61850 C/C++ South plugin
+===============================================================================
+
+A simple asynchronous IEC61850 plugin that pulls data from a server and sends
+it to Fledge.
+
+To build this plugin, you will need the libiec61850 library installed on your environment
+as described below.
+
+You also need to have Fledge installed from the source code, not from the
+package repository.
+
+
+Building libiec61850
+-----------------
+
+To build IEC104 C/C++ South plugin, you need to download libiec61850 at:
+https://github.com/mz-automation/libiec61850
+
+.. code-block:: console
+
+  $ git clone https://github.com/mz-automation/libiec61850.git
+  $ cd libiec61850
+  $ export LIB_61850=`pwd`
+
+As shown above, you need a $LIB_61850 env var set to the source tree of the
+library.
+
+Then, you can build libiec61850 with:
+
+.. code-block:: console
+
+  $ mkdir build
+  $ cd build
+  $ cmake ..
+  $ make
+
 
 Build
 ----
+
 To build Fledge IEC 61850 C++ South plugin:
 
 .. code-block:: console
@@ -60,3 +98,16 @@ Examples:
   $ cmake -DFLEDGE_INSTALL=/home/source/develop/Fledge ..
 
   $ cmake -DFLEDGE_INSTALL=/usr/local/fledge ..
+
+Using the plugin
+----------------
+
+As described in the Fledge documentation, you can use the plugin by adding
+a service from the web API:
+
+
+ - On the web API, go to the South tab
+ - Click on "Add +"
+ - Select iec61850 and give it a name, then click on "Next"
+ - Change the default settings to your settings, then click on "Next"
+ - Let the "Enabled" option checked, then click on "Done"

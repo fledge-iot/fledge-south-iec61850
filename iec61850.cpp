@@ -7,6 +7,7 @@
  */
 
 #include <iec61850.h>
+#include <zconf.h>
 #include "iec61850_client.h"
 #include "hal_thread.h"
 #include <string>
@@ -76,7 +77,7 @@ void IEC61850::setCdc(string CDC) {
 
 void IEC61850::start() {
 
-    Logger::getLogger()->warn("Plugin started");
+    Logger::getLogger()->info("Plugin started");
     /* Creating the client for fledge */
     m_client = new IEC61850Client(this);
     /* The type of Data class */
@@ -127,7 +128,7 @@ void IEC61850::loop(){
                                 break;
 
                             case (MMS_DATA_ACCESS_ERROR) :
-                                Logger::getLogger()->warn("MMS access error, please reconfigure");
+                                Logger::getLogger()->info("MMS access error, please reconfigure");
                                 break;
                             default :
                                 break;
@@ -141,15 +142,12 @@ void IEC61850::loop(){
                 std::this_thread::sleep_for(timespan);
             }
         }
+
         std::chrono::milliseconds timespan(4);
         std::this_thread::sleep_for(timespan);
     }
 
 }
-
-
-
-
 
 void IEC61850::stop() {
     if (m_iedconnection != nullptr && IedConnection_getState(m_iedconnection)){
@@ -167,9 +165,6 @@ void IEC61850::ingest(std::vector<Datapoint *> points) {
     (*m_ingest)(m_data, Reading(asset, points));
 
 }
-
-
-
 
 IEC61850::~IEC61850()=default;
 
