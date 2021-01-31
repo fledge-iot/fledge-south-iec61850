@@ -4,10 +4,11 @@
  * Released under the Apache 2.0 Licence
  *
  * Author: Estelle Chigot, Lucas Barret
+ *
+ * Contributor: Colin Constans
  */
 
 #include <iec61850.h>
-#include <zconf.h>
 #include "iec61850_client.h"
 #include "hal_thread.h"
 #include <string>
@@ -15,13 +16,15 @@
 using namespace std;
 
 
-IEC61850::IEC61850(const char *ip, uint16_t port, string iedModel, std::string logicalNode, std::string logicalDevice,std::string cdc) {
+IEC61850::IEC61850(const char *ip, uint16_t port, string iedModel, std::string logicalNode, std::string logicalDevice, std::string cdc, std::string attribute, std::string fc) {
     m_ip = ip;
     m_port = port;
     m_logicalnode = logicalNode;
     m_logicaldevice = logicalDevice;
     m_iedmodel = iedModel;
     m_cdc = cdc;
+	m_attribute = attribute;
+	m_fc = fc;
     m_iedconnection = nullptr;
     m_goto="";
 }
@@ -74,6 +77,16 @@ void IEC61850::setCdc(string CDC) {
     m_cdc = CDC;
 }
 
+//Set the name of the data attribute
+void IEC61850::setAttribute(string attribute) {
+    m_attribute = attribute;
+}
+
+//Set the name of the functionnal constraint
+void IEC61850::setFc(string FC) {
+    m_fc = FC;
+}
+
 
 void IEC61850::start() {
 
@@ -81,7 +94,7 @@ void IEC61850::start() {
     /* Creating the client for fledge */
     m_client = new IEC61850Client(this);
     /* The type of Data class */
-    m_goto = m_iedmodel + m_logicaldevice + "/" + m_logicalnode + "." + m_cdc + "." + "instMag.f";
+    m_goto = m_iedmodel + m_logicaldevice + "/" + m_logicalnode + "." + m_cdc + "." + m_attribute;
 
     loopActivated = true;
     loopThread = thread(&IEC61850::loop, this);
@@ -100,7 +113,7 @@ void IEC61850::loop(){
                 std::unique_lock<std::mutex> guard2(loopLock);
                 if (m_error == IED_ERROR_OK) {
                     /* read an analog measurement value from server */
-                    MmsValue *value = IedConnection_readObject(m_iedconnection, &m_error, m_goto.c_str(), IEC61850_FC_MX);
+                    MmsValue *value = IedConnection_readObject(m_iedconnection, &m_error, m_goto.c_str(), FunctionalConstraint_fromString(m_fc.c_str())); //example : IEC61850_FC_MX
                     /* The value should not be null */
                     if (value != nullptr) {
                         /* Test the type value */
@@ -109,10 +122,8 @@ void IEC61850::loop(){
                                 m_client->sendData("MMS_FLOAT", MmsValue_toFloat(value));
                                 break;
 
-                            case(MMS_BOOLEAN): //long
-                                const char *bval;
-                                MmsValue_setMmsString(value, bval);
-                                m_client -> sendData("MMS_BOOLEAN", bval);
+                            case(MMS_BOOLEAN): 
+                                m_client -> sendData("MMS_BOOLEAN", long(MmsValue_getBoolean(value) ? 1 : 0));
                                 break;
 
                             case(MMS_INTEGER):
@@ -124,30 +135,43 @@ void IEC61850::loop(){
                                 break;
 
                             case(MMS_UNSIGNED):
-                                m_client -> sendData("MMS_VISIBLE_STRING", long(MmsValue_toUint32(value)));
+                                m_client -> sendData("MMS_UNSIGNED", long(MmsValue_toUint32(value)));
                                 break;
+								
+							case(MMS_OCTET_STRING):
+								{
+									std::string sval(reinterpret_cast<char*>(MmsValue_getOctetStringBuffer(value)), MmsValue_getOctetStringSize(value));
+									m_client -> sendData("MMS_OCTET_STRING", sval);
+								}
+								break;
 
                             case (MMS_DATA_ACCESS_ERROR) :
                                 Logger::getLogger()->info("MMS access error, please reconfigure");
                                 break;
                             default :
+								Logger::getLogger()->info("Unsupported MMS data type");
                                 break;
 
                         }
                         MmsValue_delete(value);
                     }
                 }
+				else
+				{
+					Logger::getLogger()->info("No data to read");
+				}
                 guard2.unlock();
                 std::chrono::milliseconds timespan(4);
                 std::this_thread::sleep_for(timespan);
             }
         }
-
         std::chrono::milliseconds timespan(4);
         std::this_thread::sleep_for(timespan);
     }
 
 }
+
+
 
 void IEC61850::stop() {
     if (m_iedconnection != nullptr && IedConnection_getState(m_iedconnection)){
@@ -165,6 +189,9 @@ void IEC61850::ingest(std::vector<Datapoint *> points) {
     (*m_ingest)(m_data, Reading(asset, points));
 
 }
+
+
+
 
 IEC61850::~IEC61850()=default;
 
