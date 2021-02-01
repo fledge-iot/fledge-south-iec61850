@@ -22,6 +22,9 @@
 #include <mms_server.h>
 #include <mms_types.h>
 #include <mms_value.h>
+#include <thread>
+#include <mutex>
+#include <atomic>
 
 class IEC61850Client;
 
@@ -30,14 +33,16 @@ using namespace std;
 class IEC61850
 {
 	public:
-		IEC61850(const char *ip, uint16_t port,  string iedModel, std::string logicalNode, std::string logicalDevice,std::string CDC_SAV);
+
+		IEC61850(const char *ip, uint16_t port,  string iedModel, std::string logicalNode, std::string logicalDevice, std::string CDC_SAV, std::string dataAttribute, std::string FC);
 		~IEC61850();
         void        setIp(const char *ip);
         void        setPort(uint16_t port);
 		void		setAssetName(const std::string& name);
 		void        setLogicalDevice(std::string logicaldevice_name);;
 		void 		setLogicalNode(std::string logicalnode_name);
-		void		restart();
+		void		setAttribute(std::string attribute_name);
+		void 		setFc(std::string fc_name);
 
 		void		start();
 		void		stop();
@@ -49,9 +54,13 @@ class IEC61850
 				}
 
 
-    void setModel(string basicString);
+        void setModel(string model);
+        void setCdc(string CDC);
 
-    void setCdc(string CDC);
+        void loop();
+        std::mutex loopLock;
+        std::atomic<bool> loopActivated{};
+        thread loopThread;
 
 private:
 
@@ -62,13 +71,16 @@ private:
 		std::string         m_logicalnode;
 		std::string 		m_iedmodel;
 		std::string         m_cdc;
+		std::string 		m_attribute;
+		std::string			m_fc;
 		std::string         m_goto;
 		IedConnection       m_iedconnection;
 		IedClientError 		m_error;
-		void				(*m_ingest)(void *, Reading);
-		void				*m_data;
+		void				(*m_ingest)(void *, Reading){};
+		void				*m_data{};
 
-		IEC61850Client   	*m_client;
+		IEC61850Client   	*m_client{};
+
 
 
 };
