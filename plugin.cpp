@@ -18,7 +18,7 @@ using namespace std;
  * Default configuration
  */
 
-const char *default_config = QUOTE ({
+static const char *default_config = QUOTE ({
                                         "plugin" : {
         "description" : "iec61850 south plugin",
         "type" : "string",
